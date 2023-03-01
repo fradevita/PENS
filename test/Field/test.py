@@ -63,10 +63,8 @@ def objective(x, a, b):
 
 pars, cov = curve_fit(f = objective, xdata = np.log(resolutions), ydata = np.log(Linf_gradx))
 a, b = pars
-
 pars, cov = curve_fit(f = objective, xdata = np.log(resolutions), ydata = np.log(Linf_grady))
 c, d = pars
-
 pars, cov = curve_fit(f = objective, xdata = np.log(resolutions), ydata = np.log(Linf_lapl))
 e, f = pars
 

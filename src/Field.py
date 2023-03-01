@@ -83,6 +83,8 @@ class vector:
             # Init the provided arguments
             if 'name' in args:
                 self.name = args.get('name')
+            else:
+                self.name = 'unset'
             if 'Grid' in args:
                 self.G = args.get('Grid')
                 self.x = scalar(args)

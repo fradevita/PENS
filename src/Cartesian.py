@@ -29,6 +29,8 @@ class Grid:
         self.y = np.zeros(Ny)
         for j in range(Ny):
             self.y[j] = origin[1] + (j + 0.5)*self.dy
+        
+        self.X, self.Y = np.meshgrid(self.x, self.y)
 
 def CreateGridFromFile(setup: dict):
     # Create the grid from the json file stored in the input variable setup

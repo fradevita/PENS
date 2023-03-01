@@ -1,58 +1,72 @@
-import math
-import numpy as np
-import matplotlib.pyplot as plt
+'''
+    We wish to solve the Poisson equation
+
+        d^2f
+        ---- = phi
+        dx^2
+
+    with f(x,y) = cos(pi x) * cos(pi y), x,y = [-1 , 1]
+    BCs are Neumann = 0 (df/dx = 0) on all boundaries.
+'''
+
+###################################################################################################
+# Import all requested modules
+###################################################################################################
 import os
 import sys
-
-# Load PENS 
+import numpy as np
+import matplotlib.pyplot as plt
+# Load PENS modules
 sys.path.insert(0, os.path.expandvars(os.environ['PENS']))
-import Poisson_2D
+import Cartesian
+import Field
+import Poisson
 
-# Perform grid convergence over the following resolution values
-resolutions = np.array([8, 16, 32, 64, 128, 256])
+###################################################################################################
+# Evaluate grid convergence
+###################################################################################################
+resolutions = [8]
+for i in range(6):
+    resolutions.append(resolutions[i]*2)
+resolutions = np.array(resolutions)
 
-Linf = np.zeros(len(resolutions))
-L2 = np.zeros(len(resolutions))
-c = 0
+e = []
 for N in resolutions:
 
-    # Define the numerical grid
-    L = 1.0
-    dx = L/N
-    dy = L/N
-    x = np.linspace(0, L - dx, N)
-    y = np.linspace(0, L - dy, N)
+    # Create the Cartesian Grid
+    Grid = Cartesian.Grid(int(N), int(N), 2.0, 2.0, [-1.0, -1.0])
     
-    # Define target solution and equation RHS
-    f = np.zeros((N,N))
-    rhs = np.zeros((N,N))
-    for j in range(N):
-        for i in range(N):
-            f[j,i] = math.sin(2.*math.pi*x[i])*math.cos(2.*math.pi*y[j])
-            rhs[j,i] = -8.*math.pi*math.pi*math.sin(2.*math.pi*x[i])*math.cos(2.*math.pi*y[j])
+    # Create a Scalar field (no need of ghost nodes)
+    phi = Field.scalar({'name': 'phi', 'Grid': Grid, 'gl': 0})
+    # And set it to the RHS of poisson equation
+    phi.f = -2.*np.pi**2*np.cos(np.pi*Grid.X)*np.cos(np.pi*Grid.Y)
 
     # Solve Poisson equation
-    sol = Poisson_2D.solve(rhs, dx)
+    sol = Poisson.solve_NN(phi)
+    #sol = Poisson.solve_PP(phi)
+    
+    # The solution is 
+    f = np.cos(np.pi*Grid.X)*np.cos(np.pi*Grid.Y)
 
-    # Evaluate errors
-    e = abs(f - sol)
-    Linf[c] = e.max()
-    L2[c] =  e.std()
-    c = c + 1
+    e.append(np.amax(np.abs(sol - f)))
 
 # Scaling lines for the plot
-scaling1 = 0.5/resolutions
-scaling2 = 5/resolutions**2
+scaling_1st = 1./resolutions
+scaling_2nd = 10/resolutions**2
 
-plt.figure()
-plt.xlabel(r'$N$')
-plt.ylabel(r'$|e|$')
-plt.title('2D FFT Poisson solver convergence rate') 
-plt.loglog(resolutions,     Linf,                   'o', label = r'$L_{\infty}$')
-plt.loglog(resolutions,       L2,                   's', label = r'$L_{2}$')
-plt.loglog(resolutions, scaling1,  '-', color = 'black', label = r'$1/N$')
-plt.loglog(resolutions, scaling2, '--', color = 'black', label = r'$1/N^2$')
-plt.grid()
-plt.legend()
+###################################################################################################
+# Plot
+####################################################################################################
+fig, ax = plt.subplots()
+ax.set_xlabel(r'$N$')
+ax.set_ylabel(r'$L_{\infty}(e)$')
+ax.set_title('2D Poisson solver convergence rate')
+ax.loglog(resolutions, e, 'o')
+ax.loglog(resolutions, scaling_1st,  '-', color = 'black', label = r'$1/N$')
+ax.loglog(resolutions, scaling_2nd, '-.', color = 'black', label = r'$1/N^2$')
+ax.legend()
+ax.grid()
+fig.canvas.manager.full_screen_toggle() # toggle fullscreen mode
+plt.tight_layout()
 plt.show()
 plt.close()
