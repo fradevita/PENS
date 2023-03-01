@@ -44,6 +44,7 @@ for N in resolutions:
     # Solve Poisson equation
     sol = Poisson.solve_NN(phi)
     #sol = Poisson.solve_PP(phi)
+    sol = Poisson.solve_PN(phi)
     
     # The solution is 
     f = np.cos(np.pi*Grid.X)*np.cos(np.pi*Grid.Y)

@@ -4,7 +4,7 @@ import os
 
 sys.path.insert(0, os.path.expandvars(os.environ['PENS']))
 import Field
-import Poisson_2D
+import Poisson
 
 #########################################################################################
 # Advance function
@@ -37,7 +37,8 @@ def advance(fields, parameters):
 
     # Solve Poisson equation
     phi = Field.scalar({'name': 'phi', 'Grid': Vn.G, 'gl': 1})
-    phi.x.f = Poisson_2D.FFT_solver(Field.Divergence(Vs)*rho/dt)
+    phi.f = Field.Divergence(Vs)*rho/dt
+    phi.f = Poisson.solve_NN(phi)
     phi.update_ghost_nodes()
 
     # Update velocity
