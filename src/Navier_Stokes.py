@@ -35,6 +35,16 @@ def advance(fields, parameters):
     Vs = Field.vector({'name': 'velocity*', 'Grid': Vn.G, 'gl': 1})
     Vs.x.f[1:-1, 1:-1] = Vn.x.f[1:-1, 1:-1] + dt*(-gradP.x.f/rho + 1.5*RHS.x.f - 0.5*RHSnm1.x.f + g[0])
     Vs.y.f[1:-1, 1:-1] = Vn.y.f[1:-1, 1:-1] + dt*(-gradP.y.f/rho + 1.5*RHS.y.f - 0.5*RHSnm1.y.f + g[1])
+    
+    # Set bc of predicted velocity field equal to that of V
+    Vs.x.l = Vn.x.l
+    Vs.x.r = Vn.x.r
+    Vs.x.b = Vn.x.b
+    Vs.x.t = Vn.x.t
+    Vs.y.l = Vn.y.l
+    Vs.y.r = Vn.y.r
+    Vs.y.b = Vn.y.b
+    Vs.y.t = Vn.y.t
     Vs.update_ghost_nodes()
 
     # Solve Poisson equation
