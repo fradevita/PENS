@@ -14,7 +14,7 @@ class Grid:
     # [x,y] = coordiantes of the center of the grid cells.
 
     # Class Constructor
-    def __init__(self, Nx: int, Ny: int, Lx: float, Ly: float, origin: np.ndarray):
+    def __init__(self, Nx: int, Ny: int, Lx: float, Ly: float, origin: np.ndarray, bc: list):
         self.Nx = Nx
         self.Lx = Lx
         self.dx = Lx/Nx
@@ -29,8 +29,14 @@ class Grid:
         self.y = np.zeros(Ny)
         for j in range(Ny):
             self.y[j] = origin[1] + (j + 0.5)*self.dy
-        
-        self.X, self.Y = np.meshgrid(self.x, self.y)
+        self.xc = np.zeros((Nx+2,Ny+2))
+        self.yc = np.zeros((Nx+2,Ny+2))
+        for j in range(Ny+2):
+            for i in range(Nx+2):
+                self.xc[i,j] = origin[0] + (i - 0.5)*self.dx
+                self.yc[i,j] = origin[1] + (j - 0.5)*self.dx
+
+        self.bc = bc
 
 def CreateGridFromFile(setup: dict):
     # Create the grid from the json file stored in the input variable setup

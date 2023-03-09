@@ -5,6 +5,7 @@ import os
 sys.path.insert(0, os.path.expandvars(os.environ['PENS']))
 import Field
 import Poisson
+import numpy as np
 
 #########################################################################################
 # Advance function
@@ -20,77 +21,84 @@ def advance(fields, parameters):
     dt = parameters.get('dt')
     rho = parameters.get('rho')
     mu = parameters.get('mu')
-
+    g = parameters.get('g')
+    
     # Evaluate RHS at timestep n
-    RHS = Field.vector({'Grid': Vn.G})
+    RHS = Field.vector({'name': 'RHS', 'Grid': Vn.G, 'gl': 0})
     gradP = Field.Gradient(Pn)
     Advection = compute_advection_fluxes(Vn)
-    Diffusion = compute_diffusion_fluxes(Vn, mu)
-    RHS.x = -gradP.x + (1.5*Diffusion.x + 1.5*Advection.x - 0.5*RHSnm1.x)
-    RHS.y = -gradP.y + (1.5*Diffusion.y + 1.5*Advection.y - 0.5*RHSnm1.y)
+    Diffusion = compute_diffusion_fluxes(Vn)
+    RHS.x.f = mu*Diffusion.x.f/rho + Advection.x.f
+    RHS.y.f = mu*Diffusion.y.f/rho + Advection.y.f
 
     # Compute predicted velocity field
     Vs = Field.vector({'name': 'velocity*', 'Grid': Vn.G, 'gl': 1})
-    Vs.x.f[1:-1, 1:-1] = Vn.x.f[1:-1, 1:-1] + dt*RHS.x.f/rho
-    Vs.y.f[1:-1, 1:-1] = Vn.y.f[1:-1, 1:-1] + dt*RHS.y.f/rho
+    Vs.x.f[1:-1, 1:-1] = Vn.x.f[1:-1, 1:-1] + dt*(-gradP.x.f/rho + 1.5*RHS.x.f - 0.5*RHSnm1.x.f + g[0])
+    Vs.y.f[1:-1, 1:-1] = Vn.y.f[1:-1, 1:-1] + dt*(-gradP.y.f/rho + 1.5*RHS.y.f - 0.5*RHSnm1.y.f + g[1])
     Vs.update_ghost_nodes()
 
     # Solve Poisson equation
     phi = Field.scalar({'name': 'phi', 'Grid': Vn.G, 'gl': 1})
-    phi.f = Field.Divergence(Vs)*rho/dt
-    phi.f = Poisson.solve_NN(phi)
+    phi.f[1:-1,1:-1] = Field.Divergence(Vs)*rho/dt
+    phi.f[1:-1,1:-1] = Poisson.solve(phi)
     phi.update_ghost_nodes()
 
     # Update velocity
-    dphidx, dphidy = Field.Gradient(phi)
-    Vn.x = Vn.x - dphidx*dt/rho
-    Vn.y = Vn.y - dphidy*dt/rho
+    gradphi = Field.Gradient(phi)
+    Vn.x.f[1:-1,1:-1] = Vs.x.f[1:-1,1:-1] - gradphi.x.f*dt/rho
+    Vn.y.f[1:-1,1:-1] = Vs.y.f[1:-1,1:-1] - gradphi.y.f*dt/rho
+    Vn.update_ghost_nodes()
 
     # Update pressure
-    Pn.x = Pn.x + phi
+    Pn.f[1:-1,1:-1] = Pn.f[1:-1,1:-1] + phi.f[1:-1,1:-1]
+    Pn.update_ghost_nodes()
+    
+    RHSnm1.x.f = RHS.x.f.copy()
+    RHSnm1.y.f = RHS.y.f.copy()
 
-    return Pn, Vn, RHS
+    del RHS, phi, Vs, gradP, gradphi, Diffusion, Advection
+    return Pn, Vn, RHSnm1
 
 #########################################################################################
 # Advection function
 #########################################################################################
 def compute_advection_fluxes(V: Field.vector):
-    Advection = Field.vector({'Grid': V.G})
+    Advection = Field.vector({'name': 'Advection', 'Grid': V.G, 'gl': 0})
     idelta = 1./V.G.dx
-    for j in range(V.G.Ny):
-        jp = j + 1
-        jm = j - 1
-        for i in range(V.G.Nx):
-            ip = i + 1
-            im = i - 1
+    for j in range(1,V.G.Ny+1):
+        jp = j+1
+        jm = j-1
+        for i in range(1,V.G.Nx+1):
+            ip = i+1
+            im = i-1
             # Advection.x: -d(uu)/dx - d(uv)/dy
             # d(uu)/dx = (uuip - uuim)/dx
-            uuip = 0.25*(V.x.f[j,ip] + V.x.f[j,i])**2
-            uuim = 0.25*(V.x.f[j,im] + V.x.f[j,i])**2
+            uuip = 0.25*(V.x.f[ip,j] + V.x.f[i,j])**2
+            uuim = 0.25*(V.x.f[im,j] + V.x.f[i,j])**2
 
             # d(uv)/dy = (uvjp - uvjm)/dy
-            uvjp = (V.x.f[jp,i] + V.x.f[ j,i])*(V.y.f[ j,ip] + V.y.f[ j,i])*0.25
-            uvjm = (V.x.f[ j,i] + V.x.f[jm,i])*(V.y.f[jm,ip] + V.y.f[jm,i])*0.25
+            uvjp = (V.x.f[i,jp] + V.x.f[i,j ])*(V.y.f[ip,j ] + V.y.f[i,j ])*0.25
+            uvjm = (V.x.f[i,j ] + V.x.f[i,jm])*(V.y.f[ip,jm] + V.y.f[i,jm])*0.25
 
-            Advection.x.f[j,i] = - (uuip - uuim)*idelta - (uvjp - uvjm)*idelta
-
+            Advection.x.f[i-1,j-1] = - (uuip - uuim)*idelta - (uvjp - uvjm)*idelta
+            
             # Advection.y: -d(vu)/dx - d(vv)/dy
             # d(vu)/dx = (vuip - vuim)/delta
-            vuip = (V.y.f[j,ip] + V.y.f[j,i ])*(V.x.f[jp,i ] + V.x.f[j, i])*0.25
-            vuim = (V.y.f[j,i ] + V.y.f[j,im])*(V.x.f[jp,im] + V.x.f[j,im])*0.25
+            vuip = (V.y.f[ip,j] + V.y.f[i ,j])*(V.x.f[i ,jp] + V.x.f[i ,j])*0.25
+            vuim = (V.y.f[i ,j] + V.y.f[im,j])*(V.x.f[im,jp] + V.x.f[im,j])*0.25
 
             # d(vv)/dy = (vvjp - vvjm)/delta
-            vvjp = 0.25*(V.y.f[jp,i] + V.y.f[j,i])**2
-            vvjm = 0.25*(V.y.f[jm,i] + V.y.f[j,i])**2
+            vvjp = 0.25*(V.y.f[i,jp] + V.y.f[i,j])**2
+            vvjm = 0.25*(V.y.f[i,jm] + V.y.f[i,j])**2
 
-            Advection.y.f[j,i] = (vuip - vuim)*idelta - (vvjp - vvjm)*idelta
+            Advection.y.f[i-1,j-1] = - (vuip - vuim)*idelta - (vvjp - vvjm)*idelta
     return Advection
 
 #########################################################################################
 # Diffusion function
 #########################################################################################
-def compute_diffusion_fluxes(V: Field.vector, mu):
-    Diffusion = Field.vector({'Grid': V.G})
-    Diffusion.x.f = mu*Field.Laplacian(V.x)
-    Diffusion.y.f = mu*Field.Laplacian(V.y)
+def compute_diffusion_fluxes(V: Field.vector):
+    Diffusion = Field.vector({'name': 'Diffusion', 'Grid': V.G, 'gl': 0})
+    Diffusion.x = Field.Laplacian(V.x)
+    Diffusion.y = Field.Laplacian(V.y)
     return Diffusion

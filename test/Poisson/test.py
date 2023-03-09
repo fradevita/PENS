@@ -34,22 +34,33 @@ e = []
 for N in resolutions:
 
     # Create the Cartesian Grid
-    Grid = Cartesian.Grid(int(N), int(N), 2.0, 2.0, [-1.0, -1.0])
+    Grid = Cartesian.Grid(int(N), int(N), 4.0, 4.0, [-2.0, -2.0], ['Periodic', 'Periodic', 'Periodic', 'Periodic'])
     
     # Create a Scalar field (no need of ghost nodes)
-    phi = Field.scalar({'name': 'phi', 'Grid': Grid, 'gl': 0})
+    phi = Field.scalar({'name': 'phi', 'Grid': Grid, 'gl': 1})
     # And set it to the RHS of poisson equation
-    phi.f = -2.*np.pi**2*np.cos(np.pi*Grid.X)*np.cos(np.pi*Grid.Y)
+    phi.f = -2.*np.pi**2*np.cos(np.pi*Grid.xc)*np.cos(np.pi*Grid.yc)
 
     # Solve Poisson equation
     sol = Poisson.solve_NN(phi)
     #sol = Poisson.solve_PP(phi)
-    sol = Poisson.solve_PN(phi)
+    #sol = Poisson.solve_PN(phi)
     
     # The solution is 
-    f = np.cos(np.pi*Grid.X)*np.cos(np.pi*Grid.Y)
+    f = np.cos(np.pi*Grid.xc)*np.cos(np.pi*Grid.yc)
 
-    e.append(np.amax(np.abs(sol - f)))
+    # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    # ax.set_xlabel(r'$x$')
+    # ax.set_ylabel(r'$y$')
+    # # surf = ax.plot_surface(Y, X, self.f[self.gl:self.sy - self.gl, self.gl: self.sx -self.gl], cmap=cm.coolwarm,
+    # #             linewidth=0, antialiased=False)
+    # surf = ax.plot_wireframe(Grid.xc[1:-1,1:-1], Grid.yc[1:-1,1:-1], sol)
+    # surf = ax.plot_wireframe(Grid.xc, Grid.yc, f, color = 'red')
+    # plt.tight_layout()
+    # plt.show()
+    # plt.close()
+
+    e.append(np.amax(np.abs(sol - f[1:-1,1:-1])))
 
 # Scaling lines for the plot
 scaling_1st = 1./resolutions
