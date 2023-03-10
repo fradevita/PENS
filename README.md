@@ -7,4 +7,4 @@ Python Environment for Numerical Simulations
 - scipy
 - matplotlib
 
-Set the environmental variable ```PENS``` to the ```src``` directory of the repository
+Set the environmental variable ```PENS``` to the ```src``` directory of the repository.
