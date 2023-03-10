@@ -46,25 +46,45 @@ class scalar:
         self.f[self.gl:self.sx - self.gl, self.gl: self.sy -self.gl] = S[:,:]
         self.update_ghost_nodes()
 
-    def plot(self, plot_type = 'contour'):
+    def plot(self, plot_type = 'contour', cmap = 'jet'):
         if (plot_type == 'contour'): 
             fig, ax = plt.subplots()
             ax.set_xlabel(r'$x$')
+            ax.set_xlim([self.G.origin[0], self.G.origin[0]+self.G.Lx])
             ax.set_ylabel(r'$y$')
-            cf = ax.contourf(self.G.x, self.G.y, self.f[self.gl:self.sx - self.gl, self.gl: self.sy -self.gl])
+            ax.set_ylim([self.G.origin[1], self.G.origin[1]+self.G.Ly])
+            cf = ax.contourf(self.G.x, self.G.y, 
+                             np.transpose(self.f[self.gl:self.sx - self.gl, self.gl: self.sy -self.gl]),
+                             cmap = cmap)
             plt.colorbar(cf, label = self.name)
             plt.show()
             plt.close()
         elif (plot_type == 'surface'):
-            X, Y = np.meshgrid(self.G.x, self.G.y)
             fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-            ax.set_xlabel(r'$x$')
             ax.set_ylabel(r'$y$')
-            # surf = ax.plot_surface(Y, X, self.f[self.gl:self.sy - self.gl, self.gl: self.sx -self.gl], cmap=cm.coolwarm,
-            #             linewidth=0, antialiased=False)
-            surf = ax.plot_wireframe(X, Y, self.f[self.gl:self.sx - self.gl, self.gl: self.sy -self.gl])
+            ax.set_ylim([self.G.origin[1], self.G.origin[1]+self.G.Ly])
+            ax.set_xlabel(r'$x$')
+            ax.set_xlim([self.G.origin[0], self.G.origin[0]+self.G.Lx])
+            ax.set_zlabel(self.name)
+            surf = ax.plot_surface(np.transpose(self.G.xc[self.gl:self.sx - self.gl, self.gl: self.sy -self.gl]), 
+                                   np.transpose(self.G.yc[self.gl:self.sx - self.gl, self.gl: self.sy -self.gl]), 
+                                   np.transpose(self.f[self.gl:self.sx - self.gl, self.gl: self.sy -self.gl]), 
+                                   cmap = cmap)
             fig.colorbar(surf, label = self.name, orientation = 'horizontal', 
                             shrink = 0.6)
+            plt.tight_layout()
+            plt.show()
+            plt.close()
+        elif (plot_type == 'wireframe'):
+            fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+            ax.set_ylabel(r'$y$')
+            ax.set_ylim([self.G.origin[1], self.G.origin[1]+self.G.Ly])
+            ax.set_xlabel(r'$x$')
+            ax.set_xlim([self.G.origin[0], self.G.origin[0]+self.G.Lx])
+            ax.set_zlabel(self.name)
+            surf = ax.plot_wireframe(np.transpose(self.G.xc[self.gl:self.sx - self.gl, self.gl: self.sy -self.gl]), 
+                                     np.transpose(self.G.yc[self.gl:self.sx - self.gl, self.gl: self.sy -self.gl]), 
+                                     np.transpose(self.f[self.gl:self.sx - self.gl, self.gl: self.sy -self.gl]))
             plt.tight_layout()
             plt.show()
             plt.close()
@@ -134,10 +154,17 @@ class vector:
         self.y.f[1:-1,1:-1] = Sy[:,:]
         self.update_ghost_nodes()
 
-    def plot(self, plot_type = 'quiver'):
+    def plot(self, plot_type = 'quiver', cmap = 'jet'):
         if (plot_type == 'quiver'): 
-            plt.figure()
-            plt.quiver(self.G.y, self.G.x, self.x.f[1:-1,1:-1], self.y.f[1:-1,1:-1])
+            fig, ax = plt.subplots()
+            # Color by vector norm
+            color = np.sqrt(np.transpose(self.x.f[self.x.gl:self.x.sx - self.x.gl, self.x.gl: self.x.sy -self.x.gl])**2 + 
+                            np.transpose(self.y.f[self.y.gl:self.y.sx - self.y.gl, self.y.gl: self.y.sy -self.y.gl])**2)
+            cb = ax.quiver(self.G.x, self.G.y, 
+                           np.transpose(self.x.f[self.x.gl:self.x.sx - self.x.gl, self.x.gl: self.x.sy -self.x.gl]), 
+                           np.transpose(self.y.f[self.y.gl:self.y.sx - self.y.gl, self.y.gl: self.y.sy -self.y.gl]),
+                           color, cmap = cmap)
+            fig.colorbar(cb, label = '|'+self.name+'|')
             plt.show()
             plt.close()
 

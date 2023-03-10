@@ -18,6 +18,7 @@ class Grid:
         self.Nx = Nx
         self.Lx = Lx
         self.dx = Lx/Nx
+        self.origin = origin
         self.x = np.zeros(Nx)
         for i in range(Nx):
             self.x[i] = origin[0] + (i + 0.5)*self.dx
