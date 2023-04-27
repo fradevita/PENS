@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 ```
 Create the array $x$ and define $y$ as the function
+
 $$ y(x) = 1 + x^2 - 2 x^3 $$
 ``` python
 x = np.linspace(0, 1, 10)
